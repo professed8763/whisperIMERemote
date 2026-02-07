@@ -33,6 +33,10 @@ Please note that for use as voice input (not as IME) there is a separate setting
 (System > Languages > Speech > Voice Input). There you can activate the app as voice input and then click the settings button.
 In settings you can then select the model for voice input.
 
+If after installation you do not find Whisper as voice input or only see a limited list (hard-coded ones like Google/Samsung)
+- enable USB debugging
+- type adb shell settings put secure voice_recognition_service org.woheller69.whisper/com.whispertflite.WhisperRecognitionService
+
 ## Model Selection
 
 Whisper offers two models to choose from: a compact English-only model that prioritizes speed and a more comprehensive multi-lingual model that, while much slower, 
