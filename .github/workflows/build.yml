@@ -32,7 +32,16 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run unit tests
-      run: ./gradlew test --stacktrace
+      run: |
+        set -o pipefail
+        ./gradlew test --stacktrace 2>&1 | tee /tmp/test.log || {
+          echo "=== TESTS FAILED ==="
+          grep -in "error" /tmp/test.log | head -30 | while read line; do
+            echo "::error::$line"
+          done
+          echo "::error::TEST_ERRORS_BASE64: $(tail -120 /tmp/test.log | base64 -w0)"
+          exit 1
+        }
 
     - name: Build Debug APK
       run: |
@@ -44,6 +53,16 @@ jobs:
           echo "::error::BUILD_ERRORS_BASE64: $(tail -80 /tmp/build.log | base64 -w0)"
           exit 1
         }
+
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          /tmp/test.log
+          /tmp/build.log
+        if-no-files-found: ignore
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
