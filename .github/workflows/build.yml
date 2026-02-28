@@ -32,6 +32,8 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run unit tests
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
         ./gradlew test --stacktrace 2>&1 | tee /tmp/test-output.txt || true
         if grep -q "BUILD FAILED" /tmp/test-output.txt; then
