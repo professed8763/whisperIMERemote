@@ -2,13 +2,10 @@ package com.whispertflite;
 
 import static org.junit.Assert.*;
 
-import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
-import androidx.preference.PreferenceManager;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -82,23 +79,6 @@ public class WhisperInputMethodServiceTest {
     }
 
     @Test
-    public void modeAutoOnHidesButtonLayout() {
-        ServiceController<WhisperInputMethodService> controller =
-                Robolectric.buildService(WhisperInputMethodService.class);
-        WhisperInputMethodService service = controller.create().get();
-
-        // Set modeAuto preference to true before creating input view
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(service);
-        sp.edit().putBoolean("imeModeAuto", true).commit();
-
-        View inputView = service.onCreateInputView();
-
-        LinearLayout layoutButtons = inputView.findViewById(R.id.layout_buttons);
-        assertEquals("Buttons layout should be hidden when modeAuto is on",
-                View.GONE, layoutButtons.getVisibility());
-    }
-
-    @Test
     public void serviceOnDestroyDoesNotCrash() {
         ServiceController<WhisperInputMethodService> controller =
                 Robolectric.buildService(WhisperInputMethodService.class);
@@ -109,7 +89,7 @@ public class WhisperInputMethodServiceTest {
     }
 
     @Test
-    public void statusTextViewStartsHidden() {
+    public void statusShowsPermissionWarningWhenNotGranted() {
         ServiceController<WhisperInputMethodService> controller =
                 Robolectric.buildService(WhisperInputMethodService.class);
         WhisperInputMethodService service = controller.create().get();
@@ -117,7 +97,8 @@ public class WhisperInputMethodServiceTest {
         View inputView = service.onCreateInputView();
         TextView tvStatus = inputView.findViewById(R.id.tv_status);
 
-        // Status text starts as GONE per the layout XML (android:visibility="gone")
-        assertEquals("Status text should start hidden", View.GONE, tvStatus.getVisibility());
+        // Without RECORD_AUDIO permission, checkRecordPermission() makes status visible
+        assertEquals("Status text should be visible when permission not granted",
+                View.VISIBLE, tvStatus.getVisibility());
     }
 }

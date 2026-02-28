@@ -27,8 +27,8 @@ public class InputLangTest {
     }
 
     @Test
-    public void getLangListContains98Languages() {
-        assertEquals("Language list should contain 98 languages", 98, langList.size());
+    public void getLangListContains99Languages() {
+        assertEquals("Language list should contain 99 languages", 99, langList.size());
     }
 
     // --- getIdForLanguage tests ---
