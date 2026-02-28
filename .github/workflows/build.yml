@@ -29,20 +29,19 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run unit tests
-      id: test
-      run: |
-        set +e
-        ./gradlew test --stacktrace 2>&1 | tail -200 > build-errors.txt
-        TEST_EXIT=$?
-        echo "## Build Output (last 200 lines)" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        cat build-errors.txt >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        cat build-errors.txt
-        exit $TEST_EXIT
+      run: ./gradlew test --stacktrace
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: |
+        set +e
+        ./gradlew assembleDebug --stacktrace 2>&1 | tail -300 > apk-build-output.txt
+        BUILD_EXIT=$?
+        echo "## APK Build Output (last 300 lines)" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat apk-build-output.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat apk-build-output.txt
+        exit $BUILD_EXIT
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
