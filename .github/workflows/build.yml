@@ -34,15 +34,15 @@ jobs:
     - name: Run unit tests
       run: |
         ./gradlew test --stacktrace 2>&1 | tee /tmp/test-output.txt || true
-        # Extract just the compilation errors and test failures (not the full Gradle stack)
-        grep -E "(error:|FAILED|failures|Exception|compileTest|> Task)" /tmp/test-output.txt > /tmp/test-errors.txt 2>/dev/null || true
         if grep -q "BUILD FAILED" /tmp/test-output.txt; then
-          echo "::error::BUILD FAILED - errors summary:"
-          ERRORS=$(cat /tmp/test-errors.txt | head -40 | base64 -w 0)
-          echo "::error::BASE64_ERRORS=${ERRORS}"
-          # Also show last 40 lines before BUILD FAILED
-          TAIL=$(grep -B 40 "BUILD FAILED" /tmp/test-output.txt | head -40 | base64 -w 0)
-          echo "::error::BASE64_TAIL=${TAIL}"
+          # Get lines with actual errors (compilation errors, test failures)
+          grep -n "error:\|FAILED\|failure\|Exception in\|cannot find symbol\|incompatible types\|package .* does not exist\|class .* is public\|method does not override" /tmp/test-output.txt | head -30 > /tmp/filtered.txt 2>/dev/null || true
+          FILTERED=$(cat /tmp/filtered.txt | base64 -w 0)
+          echo "::error::FILTERED=${FILTERED}"
+          # Also get the "what went wrong" section
+          sed -n '/What went wrong/,/Try:/p' /tmp/test-output.txt | head -20 > /tmp/whatwrong.txt 2>/dev/null || true
+          WRONG=$(cat /tmp/whatwrong.txt | base64 -w 0)
+          echo "::error::WHATWRONG=${WRONG}"
           exit 1
         fi
 
