@@ -32,14 +32,19 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run unit tests
-      run: ./gradlew test --stacktrace
-
-    - name: Upload test reports
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-reports
-        path: app/build/reports/tests/
+      run: |
+        ./gradlew test --stacktrace 2>&1 | tee /tmp/test-output.txt || true
+        # Extract just the compilation errors and test failures (not the full Gradle stack)
+        grep -E "(error:|FAILED|failures|Exception|compileTest|> Task)" /tmp/test-output.txt > /tmp/test-errors.txt 2>/dev/null || true
+        if grep -q "BUILD FAILED" /tmp/test-output.txt; then
+          echo "::error::BUILD FAILED - errors summary:"
+          ERRORS=$(cat /tmp/test-errors.txt | head -40 | base64 -w 0)
+          echo "::error::BASE64_ERRORS=${ERRORS}"
+          # Also show last 40 lines before BUILD FAILED
+          TAIL=$(grep -B 40 "BUILD FAILED" /tmp/test-output.txt | head -40 | base64 -w 0)
+          echo "::error::BASE64_TAIL=${TAIL}"
+          exit 1
+        fi
 
     - name: Run Android Lint
       run: ./gradlew lintDebug --stacktrace
