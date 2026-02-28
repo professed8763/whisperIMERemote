@@ -32,7 +32,15 @@ jobs:
       run: chmod +x gradlew
 
     - name: Run unit tests
-      run: ./gradlew test --stacktrace
+      run: |
+        ./gradlew test --stacktrace 2>&1 | tee test-output.txt
+        TEST_EXIT=${PIPESTATUS[0]}
+        if [ $TEST_EXIT -ne 0 ]; then
+          echo "::error::Test failures detected. Last 80 lines:"
+          ENCODED=$(tail -80 test-output.txt | base64 -w 0)
+          echo "::error::BASE64_TEST_OUTPUT=${ENCODED}"
+          exit $TEST_EXIT
+        fi
 
     - name: Run Android Lint
       run: ./gradlew lintDebug --stacktrace
