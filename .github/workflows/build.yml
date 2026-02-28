@@ -28,20 +28,23 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x gradlew
 
-    - name: Run unit tests
-      run: ./gradlew test --stacktrace
+    - name: Run unit tests and capture output
+      run: |
+        ./gradlew test --stacktrace > build-output.txt 2>&1 || true
+        echo "## Test Output" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        tail -150 build-output.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        tail -150 build-output.txt
+        if grep -q "BUILD SUCCESSFUL" build-output.txt; then
+          echo "Tests passed!"
+        else
+          echo "Tests FAILED - see output above"
+          exit 1
+        fi
 
     - name: Build Debug APK
-      run: |
-        set +e
-        ./gradlew assembleDebug --stacktrace 2>&1 | tail -300 > apk-build-output.txt
-        BUILD_EXIT=$?
-        echo "## APK Build Output (last 300 lines)" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        cat apk-build-output.txt >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        cat apk-build-output.txt
-        exit $BUILD_EXIT
+      run: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
