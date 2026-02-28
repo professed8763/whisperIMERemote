@@ -4,13 +4,11 @@ import static org.junit.Assert.*;
 
 import android.content.SharedPreferences;
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
-import androidx.test.core.app.ServiceScenario;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
