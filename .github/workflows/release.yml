@@ -2,6 +2,7 @@ name: Build & Release Signed APK
 
 on:
   push:
+    branches: [ main ]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -15,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -51,10 +54,24 @@ jobs:
       if: always()
       run: rm -f ${{ github.workspace }}/release.keystore
 
+    - name: Determine version
+      id: version
+      run: |
+        if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "is_tag=true" >> "$GITHUB_OUTPUT"
+        else
+          # Use versionName from build.gradle + short SHA for main branch builds
+          VERSION_NAME=$(grep 'versionName' app/build.gradle | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "version=v${VERSION_NAME}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "is_tag=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Rename APK
       run: |
-        VERSION="${GITHUB_REF_NAME:-dev}"
-        cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/whisper-remote-${VERSION}.apk
+        cp app/build/outputs/apk/release/app-release.apk \
+           app/build/outputs/apk/release/whisper-remote-${{ steps.version.outputs.version }}.apk
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -63,8 +80,10 @@ jobs:
         path: app/build/outputs/apk/release/whisper-remote-*.apk
 
     - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
         files: app/build/outputs/apk/release/whisper-remote-*.apk
         generate_release_notes: true
+        prerelease: ${{ steps.version.outputs.is_tag == 'false' }}
