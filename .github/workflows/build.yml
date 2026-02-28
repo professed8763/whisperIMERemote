@@ -28,20 +28,52 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x gradlew
 
-    - name: Run unit tests and capture output
+    - name: Run unit tests
+      id: test
       run: |
         ./gradlew test --stacktrace > build-output.txt 2>&1 || true
-        echo "## Test Output" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        tail -150 build-output.txt >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        tail -150 build-output.txt
         if grep -q "BUILD SUCCESSFUL" build-output.txt; then
-          echo "Tests passed!"
+          echo "result=success" >> $GITHUB_OUTPUT
         else
-          echo "Tests FAILED - see output above"
-          exit 1
+          echo "result=failure" >> $GITHUB_OUTPUT
         fi
+
+    - name: Post build errors to issue
+      if: steps.test.outputs.result == 'failure'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const output = fs.readFileSync('build-output.txt', 'utf8');
+          const last200 = output.split('\n').slice(-200).join('\n');
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'build-error',
+            state: 'open'
+          });
+          const title = `Build Error - ${context.sha.substring(0, 7)}`;
+          const body = `## Build Output (last 200 lines)\n\`\`\`\n${last200}\n\`\`\``;
+          if (issues.data.length > 0) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issues.data[0].number,
+              body: body
+            });
+          } else {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['build-error']
+            });
+          }
+
+    - name: Fail if tests failed
+      if: steps.test.outputs.result == 'failure'
+      run: exit 1
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
