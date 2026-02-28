@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Whisper</string>
-    <string name="voice_input">Whisper Voice Input</string>
+    <string name="app_name" translatable="false">Whisper Remote</string>
+    <string name="voice_input">Whisper Remote Voice Input</string>
     <string name="need_record_audio_permission">"RECORD_AUDIO permission is not granted"</string>
     <string name="error_download">Download error</string>
     <string name="download_model">Download Model</string>
@@ -38,4 +38,20 @@
     <string name="auto_button">automatic mode</string>
     <string name="error_no_input">No voice input received</string>
     <string name="auto_lang">Detect language</string>
+
+    <!-- Remote API settings -->
+    <string name="api_settings_title">Remote API Settings</string>
+    <string name="use_remote_api">Use Remote API</string>
+    <string name="api_provider">Provider:</string>
+    <string name="api_key">API Key:</string>
+    <string name="api_key_hint">Enter your API key</string>
+    <string name="api_endpoint">Endpoint URL:</string>
+    <string name="api_endpoint_hint">https://api.groq.com/openai</string>
+    <string name="api_model">Model:</string>
+    <string name="api_model_hint">whisper-large-v3-turbo</string>
+    <string name="save_settings">Save Settings</string>
+    <string name="settings_saved">Settings saved successfully</string>
+    <string name="configure_remote_api">Configure Remote API</string>
+    <string name="remote_api_mode">Mode:</string>
+    <string name="remote_api_active">Remote API</string>
 </resources>

@@ -88,20 +88,33 @@ public class WhisperInputMethodService extends InputMethodService {
 
     @Override
     public void onStartInputView(EditorInfo attribute, boolean restarting){
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+        boolean isRemote = Whisper.isRemoteMode(this);
 
-        if (!selectedTfliteFile.exists()) {
-            switchToPreviousInputMethod();  //switch back and download models first
-            Intent intent = new Intent(this, DownloadActivity.class);
-            intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+        if (isRemote) {
+            // Remote mode: no model files needed
+            if (mWhisper == null) {
+                initModelRemote();
+            } else if (!mWhisper.getCurrentModelPath().equals("remote")) {
+                deinitModel();
+                initModelRemote();
+            }
         } else {
-            if (mWhisper == null)
-                initModel(selectedTfliteFile);
-            else {
-                if (!mWhisper.getCurrentModelPath().equals(selectedTfliteFile.getAbsolutePath())){
-                    deinitModel();
+            // Local mode: need TFLite model files
+            selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+
+            if (!selectedTfliteFile.exists()) {
+                switchToPreviousInputMethod();  //switch back and download models first
+                Intent intent = new Intent(this, DownloadActivity.class);
+                intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } else {
+                if (mWhisper == null)
                     initModel(selectedTfliteFile);
+                else {
+                    if (!mWhisper.getCurrentModelPath().equals(selectedTfliteFile.getAbsolutePath())){
+                        deinitModel();
+                        initModel(selectedTfliteFile);
+                    }
                 }
             }
         }
@@ -283,6 +296,14 @@ public class WhisperInputMethodService extends InputMethodService {
         mRecorder.start();
     }
 
+    // Remote model initialization
+    private void initModelRemote() {
+        mWhisper = new Whisper(this, true);
+        mWhisper.initRemote();
+        Log.d(TAG, "Initialized: Remote API");
+        mWhisper.setListener(createWhisperListener());
+    }
+
     // Model initialization
     private void initModel(File modelFile) {
         boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
@@ -292,7 +313,11 @@ public class WhisperInputMethodService extends InputMethodService {
         mWhisper = new Whisper(this);
         mWhisper.loadModel(modelFile, vocabFile, isMultilingualModel);
         Log.d(TAG, "Initialized: " + modelFile.getName());
-        mWhisper.setListener(new Whisper.WhisperListener() {
+        mWhisper.setListener(createWhisperListener());
+    }
+
+    private Whisper.WhisperListener createWhisperListener() {
+        return new Whisper.WhisperListener() {
             @Override
             public void onUpdateReceived(String message) {
             }
@@ -314,7 +339,7 @@ public class WhisperInputMethodService extends InputMethodService {
                 if (result.trim().length() > 0) commitSuccess = getCurrentInputConnection().commitText(result.trim() + " ",1);
                 if (modeAuto && commitSuccess) handler.postDelayed(() -> switchToPreviousInputMethod(), 100); //slightly delayed, otherwise some apps, e.g. WhatsApp, do not accept the committed text (commitText on inactive InputConnection)
             }
-        });
+        };
     }
 
     private void startTranscription() {

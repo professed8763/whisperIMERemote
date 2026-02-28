@@ -62,58 +62,63 @@ public class WhisperRecognitionService extends RecognitionService {
 
         checkRecordPermission(callback);
 
-        sdcardDataFolder = this.getExternalFilesDir(null);
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("recognitionServiceModelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+        boolean isRemote = Whisper.isRemoteMode(this);
 
-        if (!selectedTfliteFile.exists()) {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    callback.error(ERROR_LANGUAGE_UNAVAILABLE);
-                } else {
-                    callback.error(ERROR_CLIENT);
-                }
-            } catch (RemoteException e) {
-                throw new RuntimeException(e);
-            }
+        if (isRemote) {
+            initModelRemote(callback, langToken);
         } else {
-            initModel(selectedTfliteFile, callback, langToken);
+            sdcardDataFolder = this.getExternalFilesDir(null);
+            selectedTfliteFile = new File(sdcardDataFolder, sp.getString("recognitionServiceModelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
 
-            mRecorder = new Recorder(this);
-            mRecorder.setListener(message -> {
-                if (message.equals(Recorder.MSG_RECORDING)){
-                    try {
-                        callback.rmsChanged(10);
-                    } catch (RemoteException e) {
-                        throw new RuntimeException(e);
-                    }
-                } else if (message.equals(Recorder.MSG_RECORDING_DONE)) {
-                    HapticFeedback.vibrate(this);
-                    try {
-                        callback.rmsChanged(-20.0f);
-                    } catch (RemoteException e) {
-                        throw new RuntimeException(e);
-                    }
-                    startTranscription();
-                } else if (message.equals(Recorder.MSG_RECORDING_ERROR)) {
-                    try {
-                        callback.error(ERROR_CLIENT);
-                    } catch (RemoteException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            });
-
-            if (!mWhisper.isInProgress()) {
-                HapticFeedback.vibrate(this);
-                startRecording();
+            if (!selectedTfliteFile.exists()) {
                 try {
-                    callback.beginningOfSpeech();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        callback.error(ERROR_LANGUAGE_UNAVAILABLE);
+                    } else {
+                        callback.error(ERROR_CLIENT);
+                    }
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+                return;
+            }
+            initModel(selectedTfliteFile, callback, langToken);
+        }
+
+        mRecorder = new Recorder(this);
+        mRecorder.setListener(message -> {
+            if (message.equals(Recorder.MSG_RECORDING)){
+                try {
+                    callback.rmsChanged(10);
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+            } else if (message.equals(Recorder.MSG_RECORDING_DONE)) {
+                HapticFeedback.vibrate(this);
+                try {
+                    callback.rmsChanged(-20.0f);
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+                startTranscription();
+            } else if (message.equals(Recorder.MSG_RECORDING_ERROR)) {
+                try {
+                    callback.error(ERROR_CLIENT);
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
                 }
             }
-        }
+        });
 
+        if (!mWhisper.isInProgress()) {
+            HapticFeedback.vibrate(this);
+            startRecording();
+            try {
+                callback.beginningOfSpeech();
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private void stopRecording() {
@@ -136,6 +141,16 @@ public class WhisperRecognitionService extends RecognitionService {
         stopRecording();
     }
 
+    // Remote model initialization
+    private void initModelRemote(Callback callback, int langToken) {
+        mWhisper = new Whisper(this, true);
+        mWhisper.initRemote();
+        Log.d(TAG, "Initialized: Remote API");
+        mWhisper.setLanguage(langToken);
+        Log.d(TAG, "Language token " + langToken);
+        mWhisper.setListener(createWhisperListener(callback));
+    }
+
     // Model initialization
     private void initModel(File modelFile, Callback callback, int langToken) {
         boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
@@ -147,7 +162,11 @@ public class WhisperRecognitionService extends RecognitionService {
         Log.d(TAG, "Initialized: " + modelFile.getName());
         mWhisper.setLanguage(langToken);
         Log.d(TAG, "Language token " + langToken);
-        mWhisper.setListener(new Whisper.WhisperListener() {
+        mWhisper.setListener(createWhisperListener(callback));
+    }
+
+    private Whisper.WhisperListener createWhisperListener(Callback callback) {
+        return new Whisper.WhisperListener() {
             @Override
             public void onUpdateReceived(String message) { }
 
@@ -175,7 +194,7 @@ public class WhisperRecognitionService extends RecognitionService {
                     }
                 }
             }
-        });
+        };
     }
 
     private void startRecording() {

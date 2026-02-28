@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.whispertflite.asr.Whisper
 import com.whispertflite.databinding.ActivityDownloadBinding
 import com.whispertflite.utils.Downloader
 import com.whispertflite.utils.ThemeUtils
@@ -17,10 +18,22 @@ class DownloadActivity  : AppCompatActivity() {
         setContentView(binding!!.root)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         ThemeUtils.setStatusBarAppearance(this)
+
+        // Show "Configure Remote API" button
+        binding?.buttonRemoteApi?.setVisibility(View.VISIBLE)
     }
 
     override fun onResume() {
         super.onResume()
+
+        // CRITICAL: If remote mode is enabled and configured, skip directly to MainActivity
+        if (Whisper.isRemoteMode(this)) {
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
+
         if (Downloader.checkModels(this)){
             // call Main Activity
             binding?.downloadProgress?.setProgress(100)
@@ -56,5 +69,10 @@ class DownloadActivity  : AppCompatActivity() {
         binding?.buttonUpdate?.setVisibility(View.GONE)
         Downloader.deleteOldModels(this);
         Downloader.downloadModels(this, binding)
+    }
+
+    fun openRemoteApiSettings(view: View) {
+        val intent = Intent(this, ApiSettingsActivity::class.java)
+        startActivity(intent)
     }
 }

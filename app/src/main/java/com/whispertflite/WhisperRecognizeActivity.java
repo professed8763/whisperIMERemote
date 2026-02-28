@@ -59,13 +59,19 @@ public class WhisperRecognizeActivity extends AppCompatActivity {
         mContext = this;
         sp = PreferenceManager.getDefaultSharedPreferences(this);
         sdcardDataFolder = this.getExternalFilesDir(null);
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
-        if (!selectedTfliteFile.exists()) {
-            Intent intent = new Intent(this, DownloadActivity.class);
-            intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
+
+        boolean isRemote = Whisper.isRemoteMode(this);
+
+        if (!isRemote) {
+            selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+            if (!selectedTfliteFile.exists()) {
+                Intent intent = new Intent(this, DownloadActivity.class);
+                intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            }
         }
+
         String targetLang = getIntent().getStringExtra(RecognizerIntent.EXTRA_LANGUAGE);
         String langCode = sp.getString("language", "auto");
         int langToken = InputLang.getIdForLanguage(InputLang.getLangList(),langCode);
@@ -79,7 +85,11 @@ public class WhisperRecognizeActivity extends AppCompatActivity {
             Log.d("WhisperRecognition","StartListening, no language specified");
         }
 
-        initModel(selectedTfliteFile, langToken);
+        if (isRemote) {
+            initModelRemote(langToken);
+        } else {
+            initModel(selectedTfliteFile, langToken);
+        }
 
         setContentView(R.layout.activity_recognize);
 
@@ -193,6 +203,16 @@ public class WhisperRecognizeActivity extends AppCompatActivity {
         mRecorder.start();
     }
 
+    // Remote model initialization
+    private void initModelRemote(int langToken) {
+        mWhisper = new Whisper(this, true);
+        mWhisper.initRemote();
+        Log.d(TAG, "Initialized: Remote API");
+        mWhisper.setLanguage(langToken);
+        Log.d(TAG, "Language token " + langToken);
+        mWhisper.setListener(createWhisperListener());
+    }
+
     // Model initialization
     private void initModel(File modelFile, int langToken) {
         boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
@@ -204,7 +224,11 @@ public class WhisperRecognizeActivity extends AppCompatActivity {
         Log.d(TAG, "Initialized: " + modelFile.getName());
         mWhisper.setLanguage(langToken);
         Log.d(TAG, "Language token " + langToken);
-        mWhisper.setListener(new Whisper.WhisperListener() {
+        mWhisper.setListener(createWhisperListener());
+    }
+
+    private Whisper.WhisperListener createWhisperListener() {
+        return new Whisper.WhisperListener() {
             @Override
             public void onUpdateReceived(String message) { }
 
@@ -221,7 +245,7 @@ public class WhisperRecognizeActivity extends AppCompatActivity {
                     sendResult(result.trim());
                 }
             }
-        });
+        };
     }
 
     private void sendResult(String result) {

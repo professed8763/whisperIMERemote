@@ -115,6 +115,18 @@
                 android:textAllCaps="true"
                 android:textColor="@color/lightGrey"
                 android:onClick="startMain"/>
+
+            <Button
+                android:id="@+id/button_remote_api"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/configure_remote_api"
+                android:backgroundTint="@color/colorAccent"
+                android:textAllCaps="false"
+                android:textColor="@color/lightGrey"
+                android:onClick="openRemoteApiSettings"/>
         </LinearLayout>
 
     </LinearLayout>
