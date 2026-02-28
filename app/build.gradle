@@ -12,11 +12,11 @@ android {
     }
     
     defaultConfig {
-        applicationId "org.woheller69.whisper"
+        applicationId "org.woheller69.whisperremote"
         minSdk 28
         targetSdk 35
-        versionCode 36
-        versionName "3.6"
+        versionCode 1
+        versionName "1.0"
 
     }
 
@@ -67,4 +67,10 @@ dependencies {
     implementation 'com.github.gkonovalov.android-vad:webrtc:2.0.9'
     implementation 'com.github.houbb:opencc4j:1.8.1'
     implementation 'com.github.woheller69:FreeDroidWarn:+'
+
+    // OkHttp for remote Whisper API calls
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // Unit testing
+    testImplementation 'junit:junit:4.13.2'
 }

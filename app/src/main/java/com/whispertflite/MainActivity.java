@@ -157,13 +157,20 @@ public class MainActivity extends AppCompatActivity {
         // Call the method to copy specific file types from assets to data folder
         sdcardDataFolder = this.getExternalFilesDir(null);
 
+        boolean isRemote = Whisper.isRemoteMode(this);
+
         ArrayList<File> tfliteFiles = getFilesWithExtension(sdcardDataFolder, ".tflite");
 
         // Initialize default model to use
         initModel();
 
         btnInfo = findViewById(R.id.btnInfo);
-        btnInfo.setOnClickListener(view -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/woheller69/whisperIME#Donate"))));
+        // In remote mode, btnInfo opens API settings; in local mode, opens donation link
+        if (isRemote) {
+            btnInfo.setOnClickListener(view -> startActivity(new Intent(this, ApiSettingsActivity.class)));
+        } else {
+            btnInfo.setOnClickListener(view -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/woheller69/whisperIME#Donate"))));
+        }
 
         spinnerLanguage = findViewById(R.id.spnrLanguage);
         List<Pair<String, String>> languagePairs = LanguagePairAdapter.getLanguagePairs(this);
@@ -186,44 +193,59 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
-        ArrayAdapter<File> tfliteAdapter = getFileArrayAdapter(tfliteFiles);
-        int position = tfliteAdapter.getPosition(selectedTfliteFile);
         spinnerTflite = findViewById(R.id.spnrTfliteFiles);
-        spinnerTflite.setAdapter(tfliteAdapter);
-        spinnerTflite.setSelection(position,false);
-        if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW)){
+
+        if (isRemote) {
+            // In remote mode, hide model spinner and show API info
+            spinnerTflite.setVisibility(View.GONE);
+            TextView tvStatusTitle = findViewById(R.id.tvStatusTitle);
+            tvStatusTitle.setText(getString(R.string.remote_api_mode));
+            tvStatus = findViewById(R.id.tvStatus);
+            String provider = sp.getString("apiProvider", "");
+            String model = sp.getString("apiModel", "");
+            tvStatus.setText(provider + " / " + model);
             spinnerLanguage.setEnabled(true);
             String langCode = sp.getString("language", "auto");
             spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
         } else {
-            spinnerLanguage.setSelection(0);
-            spinnerLanguage.setEnabled(false);
-        }
-        spinnerTflite.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                deinitModel();
-                selectedTfliteFile = (File) parent.getItemAtPosition(position);
-                SharedPreferences.Editor editor = sp.edit();
-                editor.putString("modelName",selectedTfliteFile.getName());
-                editor.apply();
-                initModel();
-                if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW)){
-                    spinnerLanguage.setEnabled(true);
-                    String langCode = sp.getString("language", "auto");
-                    spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
-                } else {
-                    spinnerLanguage.setSelection(0);
-                    spinnerLanguage.setEnabled(false);
+            selectedTfliteFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+            ArrayAdapter<File> tfliteAdapter = getFileArrayAdapter(tfliteFiles);
+            int position = tfliteAdapter.getPosition(selectedTfliteFile);
+            spinnerTflite.setAdapter(tfliteAdapter);
+            spinnerTflite.setSelection(position,false);
+            if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW)){
+                spinnerLanguage.setEnabled(true);
+                String langCode = sp.getString("language", "auto");
+                spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
+            } else {
+                spinnerLanguage.setSelection(0);
+                spinnerLanguage.setEnabled(false);
+            }
+            spinnerTflite.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    deinitModel();
+                    selectedTfliteFile = (File) parent.getItemAtPosition(position);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putString("modelName",selectedTfliteFile.getName());
+                    editor.apply();
+                    initModel();
+                    if (selectedTfliteFile.getName().equals(MULTI_LINGUAL_EU_MODEL_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_FAST) || selectedTfliteFile.getName().equals(MULTI_LINGUAL_TOP_WORLD_SLOW)){
+                        spinnerLanguage.setEnabled(true);
+                        String langCode = sp.getString("language", "auto");
+                        spinnerLanguage.setSelection(languagePairAdapter.getIndexByCode(langCode));
+                    } else {
+                        spinnerLanguage.setSelection(0);
+                        spinnerLanguage.setEnabled(false);
+                    }
                 }
-            }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // Handle case when nothing is selected, if needed
-            }
-        });
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    // Handle case when nothing is selected, if needed
+                }
+            });
+        }
 
 
         // Implementation of record button functionality
@@ -346,14 +368,23 @@ public class MainActivity extends AppCompatActivity {
 
     // Model initialization
     private void initModel() {
-        File modelFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
-        boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
-        String vocabFileName = isMultilingualModel ? MULTILINGUAL_VOCAB_FILE : ENGLISH_ONLY_VOCAB_FILE;
-        File vocabFile = new File(sdcardDataFolder, vocabFileName);
+        boolean isRemote = Whisper.isRemoteMode(this);
 
-        mWhisper = new Whisper(this);
-        mWhisper.loadModel(modelFile, vocabFile, isMultilingualModel);
-        Log.d(TAG, "Initialized: " + modelFile.getName());
+        if (isRemote) {
+            mWhisper = new Whisper(this, true);
+            mWhisper.initRemote();
+            Log.d(TAG, "Initialized: Remote API");
+        } else {
+            File modelFile = new File(sdcardDataFolder, sp.getString("modelName", MULTI_LINGUAL_TOP_WORLD_SLOW));
+            boolean isMultilingualModel = !(modelFile.getName().endsWith(ENGLISH_ONLY_MODEL_EXTENSION));
+            String vocabFileName = isMultilingualModel ? MULTILINGUAL_VOCAB_FILE : ENGLISH_ONLY_VOCAB_FILE;
+            File vocabFile = new File(sdcardDataFolder, vocabFileName);
+
+            mWhisper = new Whisper(this);
+            mWhisper.loadModel(modelFile, vocabFile, isMultilingualModel);
+            Log.d(TAG, "Initialized: " + modelFile.getName());
+        }
+
         mWhisper.setListener(new Whisper.WhisperListener() {
             @Override
             public void onUpdateReceived(String message) {
