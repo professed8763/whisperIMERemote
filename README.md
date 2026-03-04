@@ -1,19 +1,37 @@
- ```
-Google has announced that, starting in 2026/2027, all apps on certified Android devices
-will require the developer to submit personal identity details directly to Google.
-Since the developers of this app do not agree to this requirement, this app will no longer 
-work on certified Android devices after that time.
-```
+# Whisper Remote - Voice recognition based on Whisper
 
-## Donate
-<pre>Send a coffee to 
-woheller69@t-online.de 
-<a href= "https://www.paypal.com/signin"><img  align="left" src="https://www.paypalobjects.com/webstatic/de_DE/i/de-pp-logo-150px.png"></a>
+> **This is a fork of [woheller69/whisperIME](https://github.com/woheller69/whisperIME)** with added support for remote Whisper-compatible APIs.
 
-  
-Or via this link (with fees)
-<a href="https://www.paypal.com/donate?hosted_button_id=XVXQ54LBLZ4AA"><img  align="left" src="https://img.shields.io/badge/Donate%20with%20Debit%20or%20Credit%20Card-002991?style=plastic"></a></pre>
-# Voice recognition based on Whisper
+## What's different from the original?
+
+The original WhisperIME runs Whisper entirely on-device using TFLite models (~435 MB download). This fork adds an **optional remote API mode** that sends audio to cloud-based Whisper APIs instead, which means:
+
+- **No large model download required** - skip the 435 MB download entirely when using remote mode
+- **Faster and more accurate transcription** - cloud APIs use larger Whisper models (e.g. `whisper-large-v3-turbo`) that would be too large to run on most phones
+- **Multiple provider support** - built-in presets for Groq (free tier available) and OpenAI, plus custom endpoint support for any Whisper-compatible API
+- **Local mode still works** - the original on-device TFLite mode is fully preserved; remote API is opt-in
+
+### Supported providers
+
+| Provider | Model | Notes |
+|----------|-------|-------|
+| **Groq** | `whisper-large-v3-turbo` | Free tier available, very fast |
+| **OpenAI** | `whisper-1` | Paid API |
+| **Custom** | Any | Any Whisper-compatible endpoint (e.g. self-hosted) |
+
+### Remote API setup
+
+1. Install the app
+2. Tap **"Configure Remote API"** on the download screen
+3. Toggle **"Use Remote API"** on
+4. Select a provider and enter your API key
+5. Tap **Save Settings**
+
+The app will skip the model download and use the remote API for all transcription (IME, standalone, and system-wide voice input).
+
+For detailed technical documentation, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+---
 
 <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01.png" width="150"/> <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/02.png" width="150"/>
 
