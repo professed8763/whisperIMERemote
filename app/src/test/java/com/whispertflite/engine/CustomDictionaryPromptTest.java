@@ -1,6 +1,4 @@
-package com.whispertflite;
-
-import com.whispertflite.engine.WhisperEngineRemote;
+package com.whispertflite.engine;
 
 import org.junit.Test;
 
