@@ -39,6 +39,7 @@ public class WhisperEngineRemote implements WhisperEngine {
     private String mApiKey;
     private String mEndpoint;
     private String mModel;
+    private String mCustomDictionary;
 
     public WhisperEngineRemote(Context context) {
         mContext = context;
@@ -55,6 +56,7 @@ public class WhisperEngineRemote implements WhisperEngine {
         mApiKey = sp.getString("apiKey", "");
         mEndpoint = sp.getString("apiEndpoint", ApiEndpointBuilder.OPENAI_BASE_URL);
         mModel = sp.getString("apiModel", ApiEndpointBuilder.OPENAI_DEFAULT_MODEL);
+        mCustomDictionary = sp.getString("customDictionary", "");
 
         String validationError = ApiEndpointBuilder.validateSettings(mApiKey, mEndpoint, mModel);
         if (validationError != null) {
@@ -78,6 +80,34 @@ public class WhisperEngineRemote implements WhisperEngine {
             mClient = null;
         }
         mIsInitialized = false;
+    }
+
+    /**
+     * Builds a prompt string from a comma-separated custom dictionary.
+     * Returns null if the dictionary is null or empty after trimming.
+     */
+    static String buildPrompt(String customDictionary) {
+        if (customDictionary == null || customDictionary.trim().isEmpty()) {
+            return null;
+        }
+
+        String[] words = customDictionary.split(",");
+        StringBuilder sb = new StringBuilder();
+        for (String word : words) {
+            String trimmed = word.trim();
+            if (!trimmed.isEmpty()) {
+                if (sb.length() > 0) {
+                    sb.append(", ");
+                }
+                sb.append(trimmed);
+            }
+        }
+
+        if (sb.length() == 0) {
+            return null;
+        }
+
+        return "Custom Dictionary (use these exact spellings when they appear in the text): " + sb.toString();
     }
 
     @Override
@@ -117,6 +147,13 @@ public class WhisperEngineRemote implements WhisperEngine {
                     bodyBuilder.addFormDataPart("language", langCode);
                     Log.d(TAG, "Language: " + langCode);
                 }
+            }
+
+            // Add custom dictionary as prompt parameter
+            String prompt = buildPrompt(mCustomDictionary);
+            if (prompt != null) {
+                bodyBuilder.addFormDataPart("prompt", prompt);
+                Log.d(TAG, "Prompt: " + prompt);
             }
 
             Request request = new Request.Builder()

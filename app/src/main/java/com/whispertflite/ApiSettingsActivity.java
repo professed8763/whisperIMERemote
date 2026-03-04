@@ -27,6 +27,7 @@ public class ApiSettingsActivity extends AppCompatActivity {
     private EditText editApiKey;
     private EditText editEndpoint;
     private EditText editModel;
+    private EditText editCustomDictionary;
     private Button btnSave;
     private TextView tvStatus;
     private SharedPreferences sp;
@@ -53,6 +54,7 @@ public class ApiSettingsActivity extends AppCompatActivity {
         editApiKey = findViewById(R.id.editApiKey);
         editEndpoint = findViewById(R.id.editEndpoint);
         editModel = findViewById(R.id.editModel);
+        editCustomDictionary = findViewById(R.id.editCustomDictionary);
         btnSave = findViewById(R.id.btnSave);
         tvStatus = findViewById(R.id.tvSettingsStatus);
 
@@ -112,6 +114,7 @@ public class ApiSettingsActivity extends AppCompatActivity {
         editApiKey.setText(sp.getString("apiKey", ""));
         editEndpoint.setText(sp.getString("apiEndpoint", ApiEndpointBuilder.GROQ_BASE_URL));
         editModel.setText(sp.getString("apiModel", ApiEndpointBuilder.GROQ_DEFAULT_MODEL));
+        editCustomDictionary.setText(sp.getString("customDictionary", ""));
     }
 
     private void saveSettings() {
@@ -138,9 +141,9 @@ public class ApiSettingsActivity extends AppCompatActivity {
         editor.putString("apiKey", apiKey);
         editor.putString("apiEndpoint", endpoint);
         editor.putString("apiModel", model);
+        editor.putString("customDictionary", editCustomDictionary.getText().toString().trim());
         editor.apply();
 
-        tvStatus.setText(getString(R.string.settings_saved));
-        tvStatus.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+        finish();
     }
 }
