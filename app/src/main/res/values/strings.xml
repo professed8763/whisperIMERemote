@@ -54,4 +54,9 @@
     <string name="configure_remote_api">Configure Remote API</string>
     <string name="remote_api_mode">Mode:</string>
     <string name="remote_api_active">Remote API</string>
+
+    <!-- Custom Dictionary -->
+    <string name="custom_dictionary">Custom Dictionary:</string>
+    <string name="custom_dictionary_hint">e.g. Anthropic, GPT-4, Kotlin</string>
+    <string name="custom_dictionary_description">Words and names that should be spelled exactly as entered. Separate with commas.</string>
 </resources>

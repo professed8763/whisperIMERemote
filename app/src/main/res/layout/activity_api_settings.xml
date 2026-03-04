@@ -114,6 +114,32 @@
                 android:inputType="text"
                 android:layout_marginBottom="16dp" />
 
+            <!-- Custom Dictionary -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_dictionary"
+                android:textSize="16sp"
+                android:textColor="@color/colorAccent"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_dictionary_description"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <EditText
+                android:id="@+id/editCustomDictionary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/custom_dictionary_hint"
+                android:inputType="text"
+                android:minLines="2"
+                android:gravity="top|start"
+                android:layout_marginBottom="16dp" />
+
             <!-- Save button -->
             <Button
                 android:id="@+id/btnSave"
