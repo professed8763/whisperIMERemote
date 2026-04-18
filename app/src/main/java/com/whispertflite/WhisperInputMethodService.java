@@ -56,7 +56,8 @@ public class WhisperInputMethodService extends InputMethodService {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Context mContext;
     private CountDownTimer countDownTimer;
-    private static boolean translate = false;
+    static final String PREF_TRANSLATE = "translate";
+    private boolean translate = false;
     private boolean modeAuto = false;
     private LinearLayout layoutButtons;
 
@@ -135,11 +136,13 @@ public class WhisperInputMethodService extends InputMethodService {
         processingBar = view.findViewById(R.id.processing_bar);
         tvStatus = view.findViewById(R.id.tv_status);
         sdcardDataFolder = this.getExternalFilesDir(null);
+        translate = sp.getBoolean(PREF_TRANSLATE, false);
         btnTranslate.setImageResource(translate ? R.drawable.ic_english_on_36dp : R.drawable.ic_english_off_36dp);
         modeAuto = sp.getBoolean("imeModeAuto",false);
         btnModeAuto.setImageResource(modeAuto ? R.drawable.ic_auto_on_36dp : R.drawable.ic_auto_off_36dp);
         layoutButtons = view.findViewById(R.id.layout_buttons);
         checkRecordPermission();
+        updateTranslateBanner();
 
         // Audio recording functionality
         mRecorder = new Recorder(this);
@@ -272,7 +275,9 @@ public class WhisperInputMethodService extends InputMethodService {
 
         btnTranslate.setOnClickListener(v -> {
             translate = !translate;
+            sp.edit().putBoolean(PREF_TRANSLATE, translate).apply();
             btnTranslate.setImageResource(translate ? R.drawable.ic_english_on_36dp : R.drawable.ic_english_off_36dp);
+            updateTranslateBanner();
         });
 
         btnEnter.setOnClickListener(v -> {
@@ -361,6 +366,21 @@ public class WhisperInputMethodService extends InputMethodService {
     private void stopTranscription() {
         handler.post(() -> processingBar.setIndeterminate(false));
         mWhisper.stop();
+    }
+
+    private void updateTranslateBanner() {
+        if (tvStatus == null) return;
+        // Don't overwrite the permission warning; it takes priority.
+        int permission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO);
+        if (permission != PackageManager.PERMISSION_GRANTED) return;
+        if (translate) {
+            tvStatus.setText(getString(R.string.translate_active_banner));
+            tvStatus.setVisibility(View.VISIBLE);
+        } else if (tvStatus.getVisibility() == View.VISIBLE
+                && getString(R.string.translate_active_banner).contentEquals(tvStatus.getText())) {
+            tvStatus.setText("");
+            tvStatus.setVisibility(View.GONE);
+        }
     }
 
     private boolean checkRecordPermission() {
