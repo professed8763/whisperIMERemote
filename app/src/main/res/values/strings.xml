@@ -38,7 +38,6 @@
     <string name="auto_button">automatic mode</string>
     <string name="error_no_input">No voice input received</string>
     <string name="auto_lang">Detect language</string>
-    <string name="translate_active_banner">Translate to English active — tap EN to disable</string>
 
     <!-- Remote API settings -->
     <string name="api_settings_title">Remote API Settings</string>
