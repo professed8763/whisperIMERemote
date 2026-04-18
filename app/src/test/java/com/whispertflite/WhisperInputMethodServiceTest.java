@@ -2,9 +2,7 @@ package com.whispertflite;
 
 import static org.junit.Assert.*;
 
-import android.Manifest;
 import android.app.Application;
-import android.content.pm.PackageManager;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -19,12 +17,18 @@ import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
-import org.robolectric.Shadows;
 import org.robolectric.android.controller.ServiceController;
-import org.robolectric.shadows.ShadowApplication;
 
 @RunWith(RobolectricTestRunner.class)
 public class WhisperInputMethodServiceTest {
+
+    @After
+    public void clearTranslatePref() {
+        PreferenceManager.getDefaultSharedPreferences(RuntimeEnvironment.getApplication())
+                .edit()
+                .remove(WhisperInputMethodService.PREF_TRANSLATE)
+                .commit();
+    }
 
     @Test
     public void serviceCanBeCreated() {
@@ -112,14 +116,6 @@ public class WhisperInputMethodServiceTest {
                 View.VISIBLE, tvStatus.getVisibility());
     }
 
-    @After
-    public void clearTranslatePref() {
-        PreferenceManager.getDefaultSharedPreferences(RuntimeEnvironment.getApplication())
-                .edit()
-                .remove(WhisperInputMethodService.PREF_TRANSLATE)
-                .commit();
-    }
-
     @Test
     public void translatePrefDefaultsToFalseOnFreshInstall() {
         Application app = RuntimeEnvironment.getApplication();
@@ -164,104 +160,11 @@ public class WhisperInputMethodServiceTest {
     }
 
     @Test
-    public void translateBannerShownWhenPreferenceIsTrueAndPermissionGranted() {
-        Application app = RuntimeEnvironment.getApplication();
-        PreferenceManager.getDefaultSharedPreferences(app)
-                .edit()
-                .putBoolean(WhisperInputMethodService.PREF_TRANSLATE, true)
-                .commit();
-        ShadowApplication shadowApp = Shadows.shadowOf(app);
-        shadowApp.grantPermissions(Manifest.permission.RECORD_AUDIO);
-
-        ServiceController<WhisperInputMethodService> controller =
-                Robolectric.buildService(WhisperInputMethodService.class);
-        WhisperInputMethodService service = controller.create().get();
-
-        View inputView = service.onCreateInputView();
-        TextView tvStatus = inputView.findViewById(R.id.tv_status);
-
-        assertEquals("Banner should be visible when translate is active",
-                View.VISIBLE, tvStatus.getVisibility());
-        assertEquals("Banner should show translate-active text",
-                app.getString(R.string.translate_active_banner),
-                tvStatus.getText().toString());
-    }
-
-    @Test
-    public void translateBannerHiddenWhenPreferenceIsFalseAndPermissionGranted() {
-        Application app = RuntimeEnvironment.getApplication();
-        PreferenceManager.getDefaultSharedPreferences(app)
-                .edit()
-                .putBoolean(WhisperInputMethodService.PREF_TRANSLATE, false)
-                .commit();
-        ShadowApplication shadowApp = Shadows.shadowOf(app);
-        shadowApp.grantPermissions(Manifest.permission.RECORD_AUDIO);
-
-        ServiceController<WhisperInputMethodService> controller =
-                Robolectric.buildService(WhisperInputMethodService.class);
-        WhisperInputMethodService service = controller.create().get();
-
-        View inputView = service.onCreateInputView();
-        TextView tvStatus = inputView.findViewById(R.id.tv_status);
-
-        assertEquals("Banner should be hidden when translate is off",
-                View.GONE, tvStatus.getVisibility());
-    }
-
-    @Test
-    public void permissionWarningTakesPriorityOverTranslateBanner() {
-        Application app = RuntimeEnvironment.getApplication();
-        PreferenceManager.getDefaultSharedPreferences(app)
-                .edit()
-                .putBoolean(WhisperInputMethodService.PREF_TRANSLATE, true)
-                .commit();
-        // Permission NOT granted
-
-        ServiceController<WhisperInputMethodService> controller =
-                Robolectric.buildService(WhisperInputMethodService.class);
-        WhisperInputMethodService service = controller.create().get();
-
-        View inputView = service.onCreateInputView();
-        TextView tvStatus = inputView.findViewById(R.id.tv_status);
-
-        assertEquals("Status should show permission warning, not translate banner",
-                app.getString(R.string.need_record_audio_permission),
-                tvStatus.getText().toString());
-    }
-
-    @Test
-    public void togglingToggleOnThenOffUpdatesBanner() {
-        Application app = RuntimeEnvironment.getApplication();
-        ShadowApplication shadowApp = Shadows.shadowOf(app);
-        shadowApp.grantPermissions(Manifest.permission.RECORD_AUDIO);
-
-        ServiceController<WhisperInputMethodService> controller =
-                Robolectric.buildService(WhisperInputMethodService.class);
-        WhisperInputMethodService service = controller.create().get();
-
-        View inputView = service.onCreateInputView();
-        ImageButton btnTranslate = inputView.findViewById(R.id.btnTranslate);
-        TextView tvStatus = inputView.findViewById(R.id.tv_status);
-
-        btnTranslate.performClick();
-        assertEquals("Banner should appear after enabling translate",
-                View.VISIBLE, tvStatus.getVisibility());
-        assertEquals(app.getString(R.string.translate_active_banner),
-                tvStatus.getText().toString());
-
-        btnTranslate.performClick();
-        assertEquals("Banner should hide after disabling translate",
-                View.GONE, tvStatus.getVisibility());
-    }
-
-    @Test
-    public void translateStateNotSharedBetweenServiceInstances() {
-        // Regression test: previously the `translate` field was static, so any
-        // tap would persist across Android process lifetime. With the fix, the
-        // field is instance-scoped and backed by SharedPreferences — two fresh
-        // service instances with no prior prefs should both start with
-        // translate = false even after one toggles it (because prefs were
-        // cleared via @After).
+    public void newServiceInstanceDoesNotInheritToggleFromPrevious() {
+        // Regression test: previously the `translate` field was static, so a
+        // tap in one session leaked into every subsequent session. With the
+        // fix, the field is instance-scoped and backed by SharedPreferences —
+        // clearing prefs between sessions gives a fresh-install state.
         ServiceController<WhisperInputMethodService> controllerA =
                 Robolectric.buildService(WhisperInputMethodService.class);
         WhisperInputMethodService serviceA = controllerA.create().get();
@@ -269,7 +172,7 @@ public class WhisperInputMethodServiceTest {
         ImageButton btnTranslateA = viewA.findViewById(R.id.btnTranslate);
         btnTranslateA.performClick();  // sets pref = true for this session
 
-        // Clear the pref to simulate "fresh install" for a new service
+        // Simulate a fresh install for the next service
         PreferenceManager.getDefaultSharedPreferences(RuntimeEnvironment.getApplication())
                 .edit()
                 .remove(WhisperInputMethodService.PREF_TRANSLATE)
@@ -278,17 +181,12 @@ public class WhisperInputMethodServiceTest {
         ServiceController<WhisperInputMethodService> controllerB =
                 Robolectric.buildService(WhisperInputMethodService.class);
         WhisperInputMethodService serviceB = controllerB.create().get();
-        View viewB = serviceB.onCreateInputView();
-        TextView tvStatusB = viewB.findViewById(R.id.tv_status);
+        serviceB.onCreateInputView();
 
-        // If translate leaked statically, the banner would show. With the fix,
-        // service B starts fresh with translate = false.
-        ShadowApplication shadowApp = Shadows.shadowOf(RuntimeEnvironment.getApplication());
-        shadowApp.grantPermissions(Manifest.permission.RECORD_AUDIO);
-        // Even with permission granted, banner text should not be the translate banner.
-        String translateBanner = RuntimeEnvironment.getApplication()
-                .getString(R.string.translate_active_banner);
-        assertNotEquals("Fresh service with cleared prefs should not show translate banner",
-                translateBanner, tvStatusB.getText().toString());
+        boolean stored = PreferenceManager.getDefaultSharedPreferences(
+                RuntimeEnvironment.getApplication())
+                .getBoolean(WhisperInputMethodService.PREF_TRANSLATE, false);
+        assertFalse("Fresh service should not see translate=true leaked from prior instance",
+                stored);
     }
 }

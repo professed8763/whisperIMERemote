@@ -142,7 +142,6 @@ public class WhisperInputMethodService extends InputMethodService {
         btnModeAuto.setImageResource(modeAuto ? R.drawable.ic_auto_on_36dp : R.drawable.ic_auto_off_36dp);
         layoutButtons = view.findViewById(R.id.layout_buttons);
         checkRecordPermission();
-        updateTranslateBanner();
 
         // Audio recording functionality
         mRecorder = new Recorder(this);
@@ -277,7 +276,6 @@ public class WhisperInputMethodService extends InputMethodService {
             translate = !translate;
             sp.edit().putBoolean(PREF_TRANSLATE, translate).apply();
             btnTranslate.setImageResource(translate ? R.drawable.ic_english_on_36dp : R.drawable.ic_english_off_36dp);
-            updateTranslateBanner();
         });
 
         btnEnter.setOnClickListener(v -> {
@@ -366,21 +364,6 @@ public class WhisperInputMethodService extends InputMethodService {
     private void stopTranscription() {
         handler.post(() -> processingBar.setIndeterminate(false));
         mWhisper.stop();
-    }
-
-    private void updateTranslateBanner() {
-        if (tvStatus == null) return;
-        // Don't overwrite the permission warning; it takes priority.
-        int permission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO);
-        if (permission != PackageManager.PERMISSION_GRANTED) return;
-        if (translate) {
-            tvStatus.setText(getString(R.string.translate_active_banner));
-            tvStatus.setVisibility(View.VISIBLE);
-        } else if (tvStatus.getVisibility() == View.VISIBLE
-                && getString(R.string.translate_active_banner).contentEquals(tvStatus.getText())) {
-            tvStatus.setText("");
-            tvStatus.setVisibility(View.GONE);
-        }
     }
 
     private boolean checkRecordPermission() {

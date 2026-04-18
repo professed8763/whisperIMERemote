@@ -85,6 +85,11 @@ public class WhisperEngineRemote implements WhisperEngine {
     /**
      * Builds a prompt string from a comma-separated custom dictionary.
      * Returns null if the dictionary is null or empty after trimming.
+     *
+     * Whisper treats `prompt` as text that preceded the audio, not as an
+     * instruction — so wrapping the words in English prose biases the
+     * transcription toward English regardless of the spoken language.
+     * We therefore send just the bare, comma-separated words.
      */
     static String buildPrompt(String customDictionary) {
         if (customDictionary == null || customDictionary.trim().isEmpty()) {
@@ -107,7 +112,7 @@ public class WhisperEngineRemote implements WhisperEngine {
             return null;
         }
 
-        return "Custom Dictionary (use these exact spellings when they appear in the text): " + sb.toString();
+        return sb.toString();
     }
 
     @Override
